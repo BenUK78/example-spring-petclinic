@@ -39,8 +39,19 @@ spec:
     }
     
     stages {
+
+        stage('Debug Pod Information') {
+            steps {
+                sh 'echo "Debug Pod Information"'
+                sh 'pwd'
+                sh 'ls -la'
+                sh 'env'
+            }
+        }
+
         stage('Checkout') {
             steps {
+                sh 'echo "Checkout"'
                 checkout scm
             }
         }
@@ -48,6 +59,7 @@ spec:
         stage('Build') {
             steps {
                 container('maven') {
+                    sh 'echo "Build"'
                     sh 'mvn clean package -DskipTests'
                 }
             }
@@ -56,6 +68,7 @@ spec:
         stage('Test') {
             steps {
                 container('maven') {
+                    sh 'echo "Test"'
                     sh 'mvn test'
                 }
             }
@@ -70,6 +83,7 @@ spec:
             steps {
                 container('buildah') {
                     script {
+                        sh 'echo "Build Container Image"'
                         sh """
                             buildah bud \
                             -t ${CONTAINER_REGISTRY}/${CONTAINER_IMAGE}:${CONTAINER_TAG} \
