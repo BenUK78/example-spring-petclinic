@@ -5,6 +5,9 @@ pipeline {
             yaml '''
 apiVersion: v1
 kind: Pod
+metadata:
+  labels:
+    jenkins/dynamic-agent: "true"
 spec:
   containers:
   - name: maven
@@ -30,54 +33,30 @@ spec:
 '''
         }
     }
-    
-    environment {
-        // Define environment variables
-        //CONTAINER_IMAGE = 'petclinic'
-        //CONTAINER_TAG = "${GIT_BRANCH.toLowerCase().replace('origin/', '')}-${GIT_COMMIT.substring(0,7)}"
-        //CONTAINER_REGISTRY = 'docker.io/benuk78' // Replace with your registry
-        BEN_TEST = 'BEN1'
-    }
-    
+   
     stages {
-
-        stage('Bens Shell Stage') {
-            steps {
-                sh 'echo "Debug Pod Information"'
-                sh 'pwd'
-                sh 'ls -la'
-                sh 'env'
-            }
-        }
-
-        stage('Checkout') {
-            steps {
-                sh 'echo "Checkout"'
-                checkout scm
-            }
-        }
-        
-        stage('Build') {
+        stage('Debug Information') {
             steps {
                 container('maven') {
-                    sh 'echo "Build"'
-                    sh 'mvn clean package -DskipTests'
+                    sh 'echo "Maven Container"'
+                    sh 'mvn --version'
+                    sh 'pwd'
+                    sh 'ls -la'
+                }
+                container('buildah') {
+                    sh 'echo "Buildah Container"'
+                    sh 'buildah version'
                 }
             }
         }
-
     }
-    
+   
     post {
         success {
             echo 'Pipeline completed successfully!'
         }
         failure {
             echo 'Pipeline failed. Check the logs for details.'
-        }
-        cleanup {
-            // Clean up workspace
-            cleanWs()
         }
     }
 }
