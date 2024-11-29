@@ -50,6 +50,21 @@ spec:
             }
         }
 
+        stage('Checkout') {
+            steps {
+                sh 'echo "Checkout"'
+                checkout scm
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                container('maven') {
+                    sh 'echo "Build"'
+                    sh 'mvn clean package -DskipTests'
+                }
+            }
+        }
 
     }
     
