@@ -33,14 +33,14 @@ spec:
     
     environment {
         // Define environment variables
-        CONTAINER_IMAGE = 'petclinic'
-        CONTAINER_TAG = "${GIT_BRANCH.toLowerCase().replace('origin/', '')}-${GIT_COMMIT.substring(0,7)}"
-        CONTAINER_REGISTRY = 'docker.io/benuk78' // Replace with your registry
+        //CONTAINER_IMAGE = 'petclinic'
+        //CONTAINER_TAG = "${GIT_BRANCH.toLowerCase().replace('origin/', '')}-${GIT_COMMIT.substring(0,7)}"
+        //CONTAINER_REGISTRY = 'docker.io/benuk78' // Replace with your registry
     }
     
     stages {
 
-        stage('Debug Pod Information') {
+        stage('Bens Shell Stage') {
             steps {
                 sh 'echo "Debug Pod Information"'
                 sh 'pwd'
@@ -49,81 +49,7 @@ spec:
             }
         }
 
-        stage('Checkout') {
-            steps {
-                sh 'echo "Checkout"'
-                checkout scm
-            }
-        }
-        
-        stage('Build') {
-            steps {
-                container('maven') {
-                    sh 'echo "Build"'
-                    sh 'mvn clean package -DskipTests'
-                }
-            }
-        }
-        
-        stage('Test') {
-            steps {
-                container('maven') {
-                    sh 'echo "Test"'
-                    sh 'mvn test'
-                }
-            }
-            post {
-                always {
-                    junit 'target/surefire-reports/*.xml'
-                }
-            }
-        }
-        
-        stage('Build Container Image') {
-            steps {
-                container('buildah') {
-                    script {
-                        sh 'echo "Build Container Image"'
-                        sh """
-                            buildah bud \
-                            -t ${CONTAINER_REGISTRY}/${CONTAINER_IMAGE}:${CONTAINER_TAG} \
-                            -f Dockerfile .
-                        """
-                    }
-                }
-            }
-        }
-        
-        stage('Push Container Image') {
-            steps {
-                container('buildah') {
-                    script {
-                        withCredentials([usernamePassword(
-                            credentialsId: 'container-registry-credentials', 
-                            usernameVariable: 'REGISTRY_USER', 
-                            passwordVariable: 'REGISTRY_PASS'
-                        )]) {
-                            sh """
-                                buildah login -u ${REGISTRY_USER} -p ${REGISTRY_PASS} docker.io
-                                buildah push ${CONTAINER_REGISTRY}/${CONTAINER_IMAGE}:${CONTAINER_TAG}
-                            """
-                        }
-                    }
-                }
-            }
-        }
-        
-        stage('Deploy to Kubernetes') {
-            steps {
-                script {
-                    // Update deployment with new image
-                    sh """
-                        kubectl apply -f k8s/deployment.yaml
-                        kubectl set image deployment/petclinic petclinic=${CONTAINER_REGISTRY}/${CONTAINER_IMAGE}:${CONTAINER_TAG}
-                    """
-                }
-            }
-        }
+
     }
     
     post {
