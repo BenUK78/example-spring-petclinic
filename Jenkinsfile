@@ -36,6 +36,7 @@ spec:
         //CONTAINER_IMAGE = 'petclinic'
         //CONTAINER_TAG = "${GIT_BRANCH.toLowerCase().replace('origin/', '')}-${GIT_COMMIT.substring(0,7)}"
         //CONTAINER_REGISTRY = 'docker.io/benuk78' // Replace with your registry
+        BEN_TEST = 'BEN1'
     }
     
     stages {
