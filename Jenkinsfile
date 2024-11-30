@@ -44,59 +44,72 @@ pipeline {
     }
     
     stages {
-        //stage('Checkout') {
-        //    steps {
-        //        git credentialsId: 'github-pat', url: 'https://github.com/BenUK78/example-spring-petclinic.git'
-        //    }
-        //}
-        
-
 
         stage('Checkout') {
+            // Define environment variables for the repository
+            // This allows easier configuration and reusability
             environment {
-                // Define variables for repository details
+                // Full URL of the Git repository
                 GIT_REPO_URL = 'https://github.com/BenUK78/example-spring-petclinic.git'
+                
+                // Specific branch to checkout (can be easily changed)
                 GIT_BRANCH = 'main'
             }
+            
             steps {
+                // Wrap in script block for more complex logic and error handling
                 script {
                     try {
-                        // Explicit checkout with verbose logging
+                        // Comprehensive checkout method with multiple configuration options
                         checkout([
-                            $class: 'GitSCM', 
-                            branches: [[name: "*/${env.GIT_BRANCH}"]], 
+                            // Specify the SCM (Source Control Management) class
+                            $class: 'GitSCM',
+                            
+                            // Define which branch to checkout
+                            // Uses environment variable and adds * for pattern matching
+                            branches: [[name: "*/${env.GIT_BRANCH}"]],
+                            
+                            // Configure repository access
                             userRemoteConfigs: [[
-                                credentialsId: 'github-pat', 
+                                // Reference to credentials stored in Jenkins
+                                credentialsId: 'github-pat',
+                                
+                                // Use environment variable for repository URL
                                 url: "${env.GIT_REPO_URL}"
                             ]],
+                            
+                            // Additional checkout extensions
                             extensions: [
+                                // Clean the workspace before checkout
                                 [$class: 'CleanCheckout'],
-                                [$class: 'CloneOption', 
-                                depth: 1, 
-                                noTags: false, 
-                                shallow: true
+                                
+                                // Configure clone options
+                                [$class: 'CloneOption',
+                                    depth: 1,        // Shallow clone (only latest commit)
+                                    noTags: false,   // Include tags
+                                    shallow: true    // Reduce clone time/bandwidth
                                 ]
                             ]
                         ])
                         
-                        // Verification steps
-                        sh 'pwd'
-                        sh 'ls -la'
-                        sh 'git branch -v'
-                        sh 'git log -1'
+                        // Verification steps to confirm successful checkout
+                        sh 'pwd'           // Print current directory
+                        sh 'ls -la'        // List all files with details
+                        sh 'git branch -v' // Show current branch
+                        sh 'git log -1'    // Show latest commit
                     } catch (Exception e) {
-                        // Comprehensive error logging
+                        // Comprehensive error handling and logging
                         echo "Checkout FAILED: ${e.getMessage()}"
                         echo "Error Details:"
                         echo "Repository URL: ${env.GIT_REPO_URL}"
                         echo "Branch: ${env.GIT_BRANCH}"
                         echo "Credential ID: github-pat"
                         
-                        // Additional diagnostic commands
-                        sh 'env | grep -i git'
-                        sh 'git config --list'
+                        // Diagnostic commands to gather more information
+                        sh 'env | grep -i git'        // Show git-related environment variables
+                        sh 'git config --list'        // Show git configuration
                         
-                        // Rethrow to fail pipeline
+                        // Rethrow the exception to fail the pipeline
                         throw e
                     }
                 }
