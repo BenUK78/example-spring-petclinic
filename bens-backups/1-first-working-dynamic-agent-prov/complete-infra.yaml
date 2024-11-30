@@ -1,0 +1,350 @@
+# ============================================================================
+# GATEWAY DEFINITION
+# ============================================================================
+
+# Gateway configuration for subdomain routing
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: cluster-gateway
+  namespace: default
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http-mailhog
+      protocol: HTTP
+    hosts:
+    - "mailhog.local"
+  - port:
+      number: 8080
+      name: http-jenkins
+      protocol: HTTP
+    hosts:
+    - "jenkins.local"
+
+---
+
+# ============================================================================
+# NAMESPACE DEFINITION
+# ============================================================================
+
+# Create dedicated namespace for Jenkins
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: jenkins
+
+---
+
+# ============================================================================
+# ISTIO INGRESS CONFIGURATION
+# ============================================================================
+#
+# Gateway: Defines how traffic enters the cluster
+#
+# USES THE SINGLE GATEWAY IN THE DEFAULT NAMESPACE
+#   
+
+---
+# VirtualService: Routes traffic from the Gateway to the Jenkins service
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: jenkins
+  namespace: jenkins    	# VirtualService deployed into the jenkins namespace
+spec:
+  hosts:
+  - "jenkins.local"
+  gateways:
+  - default/cluster-gateway	# Uses the gateway in the default namespace
+  http:
+  - route:
+    - destination:
+        host: jenkins.jenkins.svc.cluster.local    # Fully qualified domain name for cross-namespace routing
+        port:
+          number: 8080
+
+---
+
+# ============================================================================
+# JENKINS RBAC CONFIGURATION
+# ============================================================================
+
+# ServiceAccount: Identity used by Jenkins
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: jenkins
+  namespace: jenkins    # Changed to jenkins namespace
+
+---
+# ClusterRole: Defines permissions needed by Jenkins
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: jenkins-admin
+rules:
+  # Permissions for Pod management (needed for dynamic agents)
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["create","delete","get","list","patch","update","watch"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create","delete","get","list","patch","update","watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get","list","watch"]
+  # Permissions for general Kubernetes resources
+  - apiGroups: [""]
+    resources: ["services","configmaps","secrets","events","namespaces"]
+    verbs: ["create","delete","get","list","patch","update","watch"]
+  # Permissions for deployments and statefulsets
+  - apiGroups: ["apps"]
+    resources: ["deployments","statefulsets"]
+    verbs: ["create","delete","get","list","patch","update","watch"]
+  # Permissions for networking
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["create","delete","get","list","patch","update","watch"]
+  # Additional resource permissions if required
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "create", "delete"]
+
+---
+# ClusterRoleBinding: Assigns the ClusterRole to the Jenkins ServiceAccount
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: jenkins-admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: jenkins-admin
+subjects:
+- kind: ServiceAccount
+  name: jenkins
+  namespace: jenkins    # Changed to jenkins namespace
+
+---
+
+# ============================================================================
+# STORAGE CONFIGURATION
+# ============================================================================
+# NOTE: pv jenkins-pv created in folder 1
+# ============================================================================
+
+# PersistentVolumeClaim: Claims storage from the PV
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: jenkins-pvc
+  namespace: jenkins    # Changed to jenkins namespace
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+      
+# NOTE: IF THE PV IS BOUND TO ANOTHER PVC
+#	1 - Delete the other pvc
+#	2 - If it is deleted, but not released try removing the 'claimRef' section using:
+#		kubectl edit pv jenkins-pv
+#		Note: in Vim: ESC-Enter Normal Mode, :qw-Save and Exit, :q-Quit
+
+---
+
+# ============================================================================
+# JENKINS SERVICE
+# ============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenkins
+  namespace: jenkins
+spec:
+  selector:
+    app: jenkins
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  - name: agent
+    port: 50000
+    targetPort: 50000
+    
+---
+
+# ============================================================================
+# JENKINS CONFIGURATION
+# ============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jenkins-logging-config
+  namespace: jenkins
+data:
+  logging.properties: |
+    handlers=java.util.logging.ConsoleHandler
+    jenkins.level=ALL
+    java.util.logging.ConsoleHandler.level=ALL
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jenkins-casc-config
+  namespace: jenkins
+data:
+  jenkins.yaml: |
+    jenkins:
+      systemMessage: "Jenkins configured automatically by JCasC"
+      
+      # Kubernetes cloud configuration
+      clouds:
+        - kubernetes:
+            name: "kubernetes"
+            serverUrl: "https://kubernetes.default.svc.cluster.local"
+            namespace: "jenkins"
+            jenkinsUrl: "http://jenkins.jenkins.svc.cluster.local:8080"
+            jenkinsTunnel: "jenkins.jenkins.svc.cluster.local:50000"
+            podLabels:
+              - key: "jenkins/dynamic-agent"
+                value: "true"
+            
+            # Agent templates for different languages
+            templates:
+              - name: "java-agent"
+                label: "java-builder"
+                containers:
+                  - name: "java"
+                    image: "maven:3.8.1-openjdk-11-slim"
+                    command: "cat"
+                    ttyEnabled: true
+                    resourceRequestCpu: "1"
+                    resourceRequestMemory: "2Gi"
+              
+              - name: "python-agent"
+                label: "python-builder"
+                containers:
+                  - name: "python"
+                    image: "python:3.9-slim"
+                    command: "cat"
+                    ttyEnabled: true
+                    resourceRequestCpu: "1"
+                    resourceRequestMemory: "2Gi"
+
+---
+
+# ============================================================================
+# JENKINS DEPLOYMENT
+# ============================================================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jenkins
+  namespace: jenkins
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jenkins
+  template:
+    metadata:
+      labels:
+        app: jenkins
+    spec:
+      serviceAccountName: jenkins
+      
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+
+      # Init containers to prepare the Jenkins environment
+      initContainers:
+        # Prepare JCasC configuration
+        - name: copy-casc-config
+          image: mikefarah/yq:4
+          command:
+            - sh
+            - -c
+            - |
+              # Validate and copy JCasC configuration
+              if yq e /casc-config/jenkins.yaml > /dev/null 2>&1; then
+                mkdir -p /var/jenkins_home/casc_configs
+                cp /casc-config/jenkins.yaml /var/jenkins_home/casc_configs/jenkins.yaml
+                echo "JCasC configuration copied successfully"
+              else
+                echo "Invalid JCasC configuration" && exit 1
+              fi
+          volumeMounts:
+            - name: jenkins-casc-config
+              mountPath: /casc-config
+              readOnly: true
+            - name: jenkins-data
+              mountPath: /var/jenkins_home
+          securityContext:
+            runAsUser: 0
+
+        # Ensure correct permissions for Jenkins home directory
+        - name: init-permissions
+          image: busybox
+          command:
+            - sh
+            - -c
+            - |
+              chown -R 1000:1000 /var/jenkins_home
+              echo "Jenkins home directory permissions set"
+          volumeMounts:
+          - name: jenkins-data
+            mountPath: /var/jenkins_home
+          securityContext:
+            runAsUser: 0
+
+      # Main Jenkins container
+      containers:
+      - name: jenkins
+        image: jenkins/jenkins:lts-jdk17
+        env:
+        - name: CASC_JENKINS_CONFIG
+          value: /var/jenkins_home/casc_configs/jenkins.yaml
+        - name: JENKINS_JAVA_OPTS
+          value: "-Djenkins.install.debug=true"
+        
+        ports:
+        - name: http
+          containerPort: 8080
+        - name: agent
+          containerPort: 50000
+
+        resources:
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+
+        volumeMounts:
+        - name: jenkins-data
+          mountPath: /var/jenkins_home
+        - name: logging-config
+          mountPath: /var/jenkins_home/logging.properties
+          subPath: logging.properties
+
+      volumes:
+      - name: jenkins-data
+        persistentVolumeClaim:
+          claimName: jenkins-pvc
+      - name: jenkins-casc-config
+        configMap:
+          name: jenkins-casc-config
+      - name: logging-config
+        configMap:
+          name: jenkins-logging-config
