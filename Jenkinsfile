@@ -201,28 +201,24 @@ spec:
         }
 
   
-		stage ("notify") {
-		    steps {
-		        // Send Email
-		        echo "Send Email stage"
-		        emailext(
-		            body: "${env.BUILD_URL}\n${currentBuild.absoluteUrl}",
-		            to: 'always@foo.bar',
-		            recipientProviders: [[$class: 'RequesterRecipientProvider']],
-		            subject: "${currentBuild.currentResult}: Job: ${env.JOB_NAME} [${env.BUILD_NUMBER}]"
-		        )
-		    }
-        }
-
-
     }
     
     post {
         success {
             echo 'Build completed successfully!'
+            emailext(
+                body: "Build Successful\n${env.BUILD_URL}\n${currentBuild.absoluteUrl}",
+                to: 'always@foo.bar',
+                recipientProviders: [[$class: 'RequesterRecipientProvider']],
+                subject: "SUCCESS: Job ${env.JOB_NAME} [${env.BUILD_NUMBER}]"
         }
         failure {
             echo 'Build failed. Please check the logs.'
+            emailext(
+                body: "Build Failed\n${env.BUILD_URL}\n${currentBuild.absoluteUrl}",
+                to: 'always@foo.bar',
+                recipientProviders: [[$class: 'RequesterRecipientProvider']],
+                subject: "FAILURE: Job ${env.JOB_NAME} [${env.BUILD_NUMBER}]"
         }
         always {
             // Clean up workspace
