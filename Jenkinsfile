@@ -21,6 +21,17 @@ pipeline {
                   limits:
                     memory: 2Gi
                     cpu: 1
+              - name: buildah
+                image: quay.io/buildah/stable:v1.29
+                command:
+                - cat
+                tty: true
+                securityContext:
+                  privileged: true
+                resources:
+                  limits:
+                    memory: 2Gi
+                    cpu: 1
             '''
         }
     }
