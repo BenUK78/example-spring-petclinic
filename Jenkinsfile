@@ -13,7 +13,7 @@ pipeline {
             spec:
               containers:
               - name: java
-                image: maven:3.8.1-openjdk-11-slim
+                image: 'maven:3.8.4-openjdk-17-slim'
                 command:
                 - cat
                 tty: true
