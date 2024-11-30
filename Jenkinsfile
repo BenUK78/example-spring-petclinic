@@ -1,40 +1,39 @@
 pipeline {
     agent {
         kubernetes {
-            // Use the Java agent template we defined in the JCasC configuration
             label 'java-builder'
-            // Optionally, you can override or add to the template here
             yaml '''
-            apiVersion: v1
-            kind: Pod
-            metadata:
-              labels:
-                some-label: some-label-value
-            spec:
-              containers:
-              - name: java
-                image: 'maven:3.8.4-openjdk-17-slim'
-                command:
-                - cat
-                tty: true
-                resources:
-                  limits:
-                    memory: 2Gi
-                    cpu: 1
-              - name: buildah
-                image: quay.io/buildah/stable:v1.29
-                command:
-                - cat
-                tty: true
-                securityContext:
-                  privileged: true
-                resources:
-                  limits:
-                    memory: 2Gi
-                    cpu: 1
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    some-label: some-label-value
+spec:
+  containers:
+    - name: java
+      image: 'maven:3.8.4-openjdk-17-slim'
+      command:
+        - cat
+      tty: true
+      resources:
+        limits:
+          memory: 2Gi
+          cpu: 1
+    - name: buildah
+      image: quay.io/buildah/stable:v1.29
+      command:
+        - cat
+      tty: true
+      securityContext:
+        privileged: true
+      resources:
+        limits:
+          memory: 2Gi
+          cpu: 1
             '''
         }
     }
+
 
     // Bens Jenkinsfile
     
@@ -115,16 +114,25 @@ pipeline {
                 }
             }
         }
+
+
+        stage('Compile') {
+            steps {
+                container('java') {
+                    sh 'mvn clean compile'
+                }
+            }
+        }
     
 
         stage('Build') {
             steps {
                 container('java') {
                     sh 'echo "------------"'
-                    sh 'echo "Java Version Number - Spring-Petclinic requires at least 17"'
+                    sh 'echo "Java Version Number - Spring-Petclinic requires at least version 17"'
                     sh 'java -version'
                     sh 'echo "------------"'
-                    sh 'mvn clean package -DskipTests'
+                    sh 'mvn package -DskipTests'
                 }
             }
         }
