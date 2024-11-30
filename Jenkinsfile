@@ -117,43 +117,13 @@ pipeline {
         }
     
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
         stage('Build') {
             steps {
                 container('java') {
+                    sh 'echo "------------"'
+                    sh 'echo "Java Version Number - Spring-Petclinic requires at least 17"'
+                    sh 'java -version'
+                    sh 'echo "------------"'
                     sh 'mvn clean package -DskipTests'
                 }
             }
