@@ -46,7 +46,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git 'https://github.com/spring-projects/spring-petclinic.git'
+                git credentialsId: 'github-pat', url: 'https://github.com/BenUK78/example-spring-petclinic.git'
             }
         }
         
