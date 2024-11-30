@@ -44,12 +44,100 @@ pipeline {
     }
     
     stages {
+        //stage('Checkout') {
+        //    steps {
+        //        git credentialsId: 'github-pat', url: 'https://github.com/BenUK78/example-spring-petclinic.git'
+        //    }
+        //}
+        
+
+
         stage('Checkout') {
+            environment {
+                // Define variables for repository details
+                GIT_REPO_URL = 'https://github.com/BenUK78/example-spring-petclinic.git'
+                GIT_BRANCH = 'main'
+            }
             steps {
-                git credentialsId: 'github-pat', url: 'https://github.com/BenUK78/example-spring-petclinic.git'
+                script {
+                    try {
+                        // Explicit checkout with verbose logging
+                        checkout([
+                            $class: 'GitSCM', 
+                            branches: [[name: "*/${env.GIT_BRANCH}"]], 
+                            userRemoteConfigs: [[
+                                credentialsId: 'github-pat', 
+                                url: "${env.GIT_REPO_URL}"
+                            ]],
+                            extensions: [
+                                [$class: 'CleanCheckout'],
+                                [$class: 'CloneOption', 
+                                depth: 1, 
+                                noTags: false, 
+                                shallow: true
+                                ]
+                            ]
+                        ])
+                        
+                        // Verification steps
+                        sh 'pwd'
+                        sh 'ls -la'
+                        sh 'git branch -v'
+                        sh 'git log -1'
+                    } catch (Exception e) {
+                        // Comprehensive error logging
+                        echo "Checkout FAILED: ${e.getMessage()}"
+                        echo "Error Details:"
+                        echo "Repository URL: ${env.GIT_REPO_URL}"
+                        echo "Branch: ${env.GIT_BRANCH}"
+                        echo "Credential ID: github-pat"
+                        
+                        // Additional diagnostic commands
+                        sh 'env | grep -i git'
+                        sh 'git config --list'
+                        
+                        // Rethrow to fail pipeline
+                        throw e
+                    }
+                }
             }
         }
-        
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         stage('Build') {
             steps {
                 container('java') {
