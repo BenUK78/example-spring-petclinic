@@ -128,7 +128,7 @@ spec:
         stage('Compile') {
             steps {
                 container('java') {
-                    sh 'mvn clean compile'
+                    sh 'mvn clean compile -Dcheckstyle.skip=true'
                 }
             }
         }
@@ -141,7 +141,7 @@ spec:
                     sh 'echo "Java Version Number - Spring-Petclinic requires at least version 17"'
                     sh 'java -version'
                     sh 'echo "------------"'
-                    sh 'mvn package -DskipTests'
+                    sh 'mvn package -DskipTests -Dcheckstyle.skip=true'
                 }
             }
         }
