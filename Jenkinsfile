@@ -211,6 +211,7 @@ spec:
                 to: 'always@foo.bar',
                 recipientProviders: [[$class: 'RequesterRecipientProvider']],
                 subject: "SUCCESS: Job ${env.JOB_NAME} [${env.BUILD_NUMBER}]"
+            )
         }
         failure {
             echo 'Build failed. Please check the logs.'
@@ -219,6 +220,7 @@ spec:
                 to: 'always@foo.bar',
                 recipientProviders: [[$class: 'RequesterRecipientProvider']],
                 subject: "FAILURE: Job ${env.JOB_NAME} [${env.BUILD_NUMBER}]"
+            )
         }
         always {
             // Clean up workspace
