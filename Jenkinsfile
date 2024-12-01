@@ -134,14 +134,17 @@ spec:
         }
     
 
-        stage('Build') {
+        stage('Package/Bld') {
             steps {
                 container('java') {
                     sh 'echo "------------"'
                     sh 'echo "Java Version Number - Spring-Petclinic requires at least version 17"'
                     sh 'java -version'
                     sh 'echo "------------"'
-                    sh 'mvn package -DskipTests -Dcheckstyle.skip=true'
+                    sh 'mvn --version'  // Print Maven version information
+                    sh 'pwd'  // Print current working directory
+                    sh 'ls -la'  // List all files in current directory
+                    sh 'mvn package -DskipTests -Dcheckstyle.skip=true -e' // Added -e for more error details
                 }
             }
         }
@@ -150,7 +153,7 @@ spec:
             steps {
                 container('java') {
                     sh 'echo "Testing Disabled - else it fails the pipeline"'
-                    sh 'mvn test -Dcheckstyle.skip=true'
+                    sh 'mvn test -Dcheckstyle.skip=true -e'  // Added -e for more error details
                 }
             }
             post {
