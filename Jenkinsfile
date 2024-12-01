@@ -128,6 +128,7 @@ spec:
         stage('Compile') {
             steps {
                 container('java') {
+                    sh 'echo "Ben Pipeline Compile Stage"'
                     sh 'mvn clean compile -Dcheckstyle.skip=true'
                 }
             }
@@ -138,6 +139,7 @@ spec:
             steps {
                 container('java') {
                     sh 'echo "------------"'
+                    sh 'echo "Ben Pipeline Package/Bld Stage"'
                     sh 'echo "Java Version Number - Spring-Petclinic requires at least version 17"'
                     sh 'java -version'
                     sh 'echo "------------"'
@@ -153,6 +155,7 @@ spec:
             steps {
                 container('java') {
                     sh 'echo "Testing Disabled - else it fails the pipeline"'
+                    sh 'echo "Ben Pipeline Test Stage"'
                     sh 'mvn test -Dcheckstyle.skip=true -e'  // Added -e for more error details
                 }
             }
@@ -169,6 +172,7 @@ spec:
                 container('buildah') {
                     script {
                         // Build image using Buildah
+                        sh 'echo "Ben Pipeline Build Container Image Stage"'
                         sh '''
                             buildah bud -t spring-petclinic:${BUILD_NUMBER} .
                         '''
@@ -189,6 +193,7 @@ spec:
                     // Use Kubernetes credentials and cluster configuration
                     withKubeConfig([credentialsId: 'kubernetes-cluster-credentials']) {
                         // Apply Kubernetes deployment manifest
+                        sh 'echo "Ben Pipeline Deploy to Kubernetes Stage"'
                         sh '''
                             sed -i "s/IMAGE_TAG/${BUILD_NUMBER}/g" k8s/deployment.yaml
                             kubectl apply -f k8s/deployment.yaml
