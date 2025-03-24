@@ -62,9 +62,6 @@ class PetController {
 		Optional<Owner> optionalOwner = this.owners.findById(ownerId);
 		Owner owner = optionalOwner.orElseThrow(() -> new IllegalArgumentException(
 				"Owner not found with id: " + ownerId + ". Please ensure the ID is correct "));
-		if (owner == null) {
-			throw new IllegalArgumentException("Owner ID not found: " + ownerId);
-		}
 		return owner;
 	}
 
@@ -79,9 +76,6 @@ class PetController {
 		Optional<Owner> optionalOwner = this.owners.findById(ownerId);
 		Owner owner = optionalOwner.orElseThrow(() -> new IllegalArgumentException(
 				"Owner not found with id: " + ownerId + ". Please ensure the ID is correct "));
-		if (owner == null) {
-			throw new IllegalArgumentException("Owner ID not found: " + ownerId);
-		}
 		return owner.getPet(petId);
 	}
 
@@ -99,7 +93,6 @@ class PetController {
 	public String initCreationForm(Owner owner, ModelMap model) {
 		Pet pet = new Pet();
 		owner.addPet(pet);
-		model.put("pet", pet);
 		return VIEWS_PETS_CREATE_OR_UPDATE_FORM;
 	}
 
@@ -126,7 +119,7 @@ class PetController {
 	}
 
 	@GetMapping("/pets/{petId}/edit")
-	public String initUpdateForm(Owner owner, @PathVariable("petId") int petId, RedirectAttributes redirectAttributes) {
+	public String initUpdateForm() {
 		return VIEWS_PETS_CREATE_OR_UPDATE_FORM;
 	}
 
@@ -136,7 +129,7 @@ class PetController {
 
 		String petName = pet.getName();
 
-		// checking if the pet name already exist for the owner
+		// checking if the pet name already exists for the owner
 		if (StringUtils.hasText(petName)) {
 			Pet existingPet = owner.getPet(petName, false);
 			if (existingPet != null && !existingPet.getId().equals(pet.getId())) {
@@ -153,10 +146,28 @@ class PetController {
 			return VIEWS_PETS_CREATE_OR_UPDATE_FORM;
 		}
 
-		owner.addPet(pet);
-		this.owners.save(owner);
+		updatePetDetails(owner, pet);
 		redirectAttributes.addFlashAttribute("message", "Pet details has been edited");
 		return "redirect:/owners/{ownerId}";
+	}
+
+	/**
+	 * Updates the pet details if it exists or adds a new pet to the owner.
+	 * @param owner The owner of the pet
+	 * @param pet The pet with updated details
+	 */
+	private void updatePetDetails(Owner owner, Pet pet) {
+		Pet existingPet = owner.getPet(pet.getId());
+		if (existingPet != null) {
+			// Update existing pet's properties
+			existingPet.setName(pet.getName());
+			existingPet.setBirthDate(pet.getBirthDate());
+			existingPet.setType(pet.getType());
+		}
+		else {
+			owner.addPet(pet);
+		}
+		this.owners.save(owner);
 	}
 
 }

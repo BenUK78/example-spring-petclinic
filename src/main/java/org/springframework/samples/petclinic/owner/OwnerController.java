@@ -50,8 +50,8 @@ class OwnerController {
 
 	private final OwnerRepository owners;
 
-	public OwnerController(OwnerRepository clinicService) {
-		this.owners = clinicService;
+	public OwnerController(OwnerRepository owners) {
+		this.owners = owners;
 	}
 
 	@InitBinder
@@ -127,7 +127,7 @@ class OwnerController {
 	private Page<Owner> findPaginatedForOwnersLastName(int page, String lastname) {
 		int pageSize = 5;
 		Pageable pageable = PageRequest.of(page - 1, pageSize);
-		return owners.findByLastName(lastname, pageable);
+		return owners.findByLastNameStartingWith(lastname, pageable);
 	}
 
 	@GetMapping("/owners/{ownerId}/edit")
