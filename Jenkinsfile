@@ -2,15 +2,7 @@
 		    agent any
 		    
 		    stages {
-		        stage ("checkout") {
-		            steps {
-		                echo "Checkout stage"
-		                sh "ls"
-		                git branch: 'main', url: 'https://github.com/BenUK78/example-spring-petclinic'
-		                sh "ls"
-		            }
-		        }
-		        
+                            	        
 		        stage ("build") {
 		            steps {
 		                echo "Build stage"
